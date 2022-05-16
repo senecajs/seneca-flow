@@ -10,14 +10,62 @@ const BasicMessages = require('./basic.messages').default
 describe('flow', () => {
 
   test('happy', async () => {
-    const seneca = Seneca({ legacy: false }).test().use('promisify').use(Flow)
-    await seneca.ready()
+    const seneca = await makeSeneca()
+    await seneca.close()
   })
 
   test('messages', async () => {
-    const seneca = Seneca({ legacy: false }).test().use('promisify').use(Flow)
+    const seneca = await makeSeneca(makeOpts())
     await (SenecaMsgTest(seneca, BasicMessages)())
+    await seneca.close()
   })
 
 })
+
+
+function makeOpts() {
+  return {
+    flows: [
+      {
+        flowDef: {
+          name: 'init01',
+          code: 'codeA',
+        },
+        stepDefs: [
+          {
+            name: 'step01',
+          },
+        ],
+      },
+
+      {
+        flowDef: {
+          name: 'init02',
+        },
+        stepDefs: [
+          {
+            name: 'step01',
+            next: {
+              step02: {}
+            },
+          },
+          {
+            name: 'step02',
+          },
+        ],
+      }
+
+    ]
+  }
+}
+
+async function makeSeneca(popts?: any) {
+  const seneca = Seneca({ legacy: false })
+    .test()
+    .use('promisify')
+    .use('entity')
+    .use(Flow, popts)
+  return await seneca.ready()
+}
+
 
