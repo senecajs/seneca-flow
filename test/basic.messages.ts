@@ -4,7 +4,7 @@ export default {
   print: false,
   pattern: 'sys:flow',
   allow: { missing: true },
-
+  // log: true,
 
   calls: [
     {
@@ -13,6 +13,8 @@ export default {
       params: {
         flowDef: {
           name: 'flow01',
+          first: 'step01',
+          xfoo: 'WW', // custom field
         },
         stepDefs: [
           {
@@ -46,7 +48,7 @@ export default {
       },
       out: {
         ok: true,
-        flowDef: { id: 'flow01', name: 'flow01' },
+        flowDef: { id: 'flow01', name: 'flow01', xfoo: 'WW' },
         stepDefs: [
           {
             id: 'flow01_step01', name: 'step01', flowDef: 'flow01',
@@ -84,6 +86,7 @@ export default {
       params: {
         flowDef: {
           name: 'init01',
+          first: 'step01',
           code: 'codeAA',
           status: 'statusB',
         },
@@ -176,6 +179,58 @@ export default {
             id: 'flow01_step03'
           }
         ],
+      }
+    },
+
+    {
+      print: true,
+      name: 'start0',
+      pattern: 'start:flow',
+      params: {
+        flow: {
+          name: 'flow01',
+        },
+        step: {
+          name: 'step01',
+        }
+      },
+      out: {
+        ok: true,
+        flow: { name: 'flow01', },
+        steps: [{ name: 'step01' }],
+      }
+    },
+
+    {
+      print: true,
+      name: 'apply0',
+      pattern: 'apply:step',
+      params: {
+        flow_id: '`start0:out.flow.id`',
+        step: {
+          name: 'step02',
+          content: { a: 22 }, // merged
+          xbar: 'QQ', // custom field
+        },
+      },
+      out: {
+        ok: true,
+        flow: {},
+        steps: [],
+      }
+    },
+
+    {
+      print: true,
+      name: 'load1',
+      pattern: 'load:flow',
+      params: {
+        flow_id: '`start0:out.flow.id`',
+      },
+      out: {
+        ok: true,
+        flow: {},
+        steps: [],
       }
     },
 

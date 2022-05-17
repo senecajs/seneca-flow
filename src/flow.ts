@@ -1,43 +1,67 @@
 /* Copyright © 2022 Richard Rodger and Seneca Project Contributors, MIT License. */
 
 
-import { Value, Skip } from 'gubu'
+import { One, Value, Open } from 'gubu'
 
 
-const FlowDefShape = {
+// TODO: generate types from a model
+
+
+// TODO: Gubu: not really open, just allow keys =~ /^x.+/
+const FlowDefShape = Open({
   name: String,
   kind: 'standard',
   code: '',
   status: '',
+  first: String, // name of first step
   content: {},
-}
+})
 
-const StepDefShape = {
+const StepDefShape = Open({
   name: String,
   kind: 'standard',
   code: '',
   status: '',
   content: {},
   next: Value({}, {})
-}
+})
 
+
+const FlowShape = Open({
+  name: String,
+  kind: 'standard',
+  code: '',
+  status: '',
+  content: {},
+})
+
+const StepShape = Open({
+  name: String,
+  kind: 'standard',
+  code: '',
+  status: '',
+  content: {},
+})
+
+
+/* - Hides implementation with seneca entities and provides data model
+ *   as pure objects.  
+ * - Foreign keys are suffixed with _id.
+ */
 
 function flow(this: any, options: any) {
   const seneca: any = this
-
-  const { One } = seneca.valid
-
 
   seneca
     .fix('sys:flow')
 
     .message({
       define: 'flowdef',
-      // TODO: this is a use case for Gubu/Optional: Optional(false)
+      // TODO: Gubu: this is a use case for Gubu/Optional: Optional(false)
       merge: One(true, false, undefined),
       flowDef: FlowDefShape,
       stepDefs: [StepDefShape],
-    }, create_flow)
+    }, msg_define_flowdef)
 
     .message({
       list: 'flowdef',
@@ -46,8 +70,24 @@ function flow(this: any, options: any) {
     .message({
       load: 'flowdef',
       name: String,
-    }, load_flowdef)
+    }, msg_load_flowdef)
 
+    .message({
+      start: 'flow',
+      flow: FlowShape,
+      step: StepShape,
+    }, msg_start_flow)
+
+    .message({
+      apply: 'step',
+      flow_id: String,
+      step: StepShape,
+    }, msg_apply_step)
+
+    .message({
+      load: 'flow',
+      flow_id: String,
+    }, msg_load_flow)
 
     .prepare(prepare)
 
@@ -67,7 +107,7 @@ function flow(this: any, options: any) {
   }
 
 
-  async function create_flow(this: any, msg: any) {
+  async function msg_define_flowdef(this: any, msg: any) {
     let ok = true
     let sysFlowDef = this.entity('sys/flowDef')
 
@@ -78,8 +118,14 @@ function flow(this: any, options: any) {
       kind: msg.flowDef.kind,
       code: msg.flowDef.code,
       status: msg.flowDef.status,
+      first: msg.flowDef.first,
       content: msg.flowDef.content,
     })
+
+    // Accept x-prefixed custom fields
+    for (let xfield of Object.keys(msg.flowDef).filter(fn => fn.match(/^x.+/))) {
+      flowDefData[xfield] = msg.flowDef[xfield]
+    }
 
     let flowDefEnt = await sysFlowDef.load$(flowDefId)
 
@@ -113,7 +159,14 @@ function flow(this: any, options: any) {
         code: stepDefEntry.code,
         status: stepDefEntry.status,
         content: stepDefEntry.content,
+        next: stepDefEntry.next,
       })
+
+      // Accept x-prefixed custom fields
+      for (let xfield of Object.keys(stepDefEntry)
+        .filter(fn => fn.match(/^x.+/))) {
+        flowStepDefData[xfield] = stepDefEntry[xfield]
+      }
 
       let flowStepDefEnt = await sysFlowStepDef.load$(flowStepDefId)
 
@@ -148,12 +201,14 @@ function flow(this: any, options: any) {
   }
 
 
-  async function load_flowdef(this: any, msg: any) {
+  async function msg_load_flowdef(this: any, msg: any) {
+    let flowDefName = msg.name
+
     // name is used as id
-    let flowDefEnt = await this.entity('sys/flowDef').load$(msg.name)
+    let flowDefEnt = await this.entity('sys/flowDef').load$(flowDefName)
     if (!flowDefEnt) {
       return {
-        ok: false, why: 'not-found'
+        ok: false, why: 'unknown-flowdef', details: { flowDefName }
       }
     }
 
@@ -168,6 +223,160 @@ function flow(this: any, options: any) {
       stepDefs,
     }
   }
+
+
+  async function msg_start_flow(this: any, msg: any) {
+    let flowres = await this.post('sys:flow,load:flowdef', { name: msg.flow.name })
+    if (!flowres.ok) {
+      return flowres
+    }
+
+    let { flowDef, stepDefs } = flowres
+
+    // console.log('FLOWDEF', flowDef)
+
+    let flowData = {
+      ...this.util.deep(flowDef, msg.flow),
+      flowDef: flowDef.name,
+      flowDef_id: flowDef.id,
+
+      // NOTE: needs a unique id!
+      id$: flowDef.name + '_' + this.util.Nid()
+    }
+
+    delete flowData.id
+
+    let flowEnt = await this.entity('sys/flow').save$(flowData)
+
+    let stepres = await apply_step(this, flowDef, stepDefs, flowEnt, msg.step)
+
+    // console.log('STEPRES', stepres)
+
+    if (!stepres.ok) {
+      return stepres
+    }
+
+    let startres = await this.post('sys:flow,load:flow', { flow_id: flowEnt.id })
+
+    // console.log('STARTRES', startres)
+
+    return startres
+  }
+
+
+  async function msg_apply_step(this: any, msg: any) {
+    let flowEnt = await this.entity('sys/flow').load$(msg.flow_id)
+
+    if (null == flowEnt) {
+      return { ok: false, why: 'unknown-flow', details: { flow: msg.flow } }
+    }
+
+    let flowres = await this.post('sys:flow,load:flowdef', { name: flowEnt.name })
+    if (!flowres.ok) {
+      return flowres
+    }
+
+    let { flowDef, stepDefs } = flowres
+
+    let out = apply_step(this, flowDef, stepDefs, flowEnt, msg.step)
+
+    return out
+  }
+
+
+  async function msg_load_flow(this: any, msg: any) {
+    let flow_id = msg.flow_id
+
+    let flowEnt = await this.entity('sys/flow').load$(flow_id)
+
+    if (null == flowEnt) {
+      return { ok: false, why: 'unknown-flow', details: { flow_id } }
+    }
+
+    let stepEnts = await this.entity('sys/flowStep').list$({ flow_id })
+
+    return {
+      ok: true,
+      flow: flowEnt.data$(false),
+      steps: stepEnts.map((se: any) => se.data$(false))
+    }
+  }
+
+
+  async function apply_step(
+    seneca: any, flowDef: any, stepDefs: any, flowEnt: any, step: any
+  ) {
+    let nextStepName = step.name
+    let nextStepDef = stepDefs.find((sd: any) => sd.name === nextStepName)
+
+    if (null == nextStepDef) {
+      return { ok: false, why: 'unknown-step', details: { step } }
+    }
+
+    // console.log('QQQ', flowEnt, stepDefs)
+
+    let currentStepName = flowEnt.step
+    let currentStepDef = stepDefs.find((sd: any) => sd.name === currentStepName)
+
+    let allowedNextStepNames: string[] =
+      [...(null == currentStepDef ?
+        [flowDef.first] : Object.keys(currentStepDef.next))]
+
+    if (!allowedNextStepNames.includes(nextStepName)) {
+      return {
+        ok: false, why: 'invalid-next-step',
+        details: {
+          currentStepName,
+          nextStepName,
+          allowedNextStepNames,
+        }
+      }
+    }
+
+    // NOTE: ensure uniqueness of step instance using id
+    let nextStepId = flowEnt.id + '_' + nextStepName
+    let sysFlowStep = seneca.entity('sys/flowStep')
+    let nextStepEnt = await sysFlowStep.load$(nextStepId)
+
+    // merge new step data onto old
+    if (null == nextStepEnt) {
+      let stepData = seneca.util.deep(nextStepDef, step)
+      delete stepData.id
+      nextStepEnt = sysFlowStep.data$({
+        ...stepData,
+        id$: nextStepId,
+      })
+    }
+    else {
+      let stepData = seneca.util.deep(nextStepEnt.data$(false), step)
+      nextStepEnt.data$({
+        ...stepData,
+        id: nextStepEnt.id,
+      })
+    }
+
+    // Ensure standard fields
+    nextStepEnt.data$({
+      flow_id: flowEnt.id,
+      flowDef_id: flowDef.id,
+      stepDef_id: nextStepDef.id,
+      name: nextStepName,
+      when: Date.now(),
+    })
+
+    await nextStepEnt.save$()
+
+    flowEnt.step = nextStepEnt.name
+    flowEnt.when = Date.now()
+    await flowEnt.save$()
+
+    return {
+      ok: true,
+      flow: flowEnt.data$(false),
+      step: nextStepEnt.data$(false),
+    }
+  }
+
 }
 
 

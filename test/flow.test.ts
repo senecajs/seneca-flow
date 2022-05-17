@@ -30,6 +30,7 @@ function makeOpts() {
         flowDef: {
           name: 'init01',
           code: 'codeA',
+          first: 'step01',
         },
         stepDefs: [
           {
@@ -41,6 +42,7 @@ function makeOpts() {
       {
         flowDef: {
           name: 'init02',
+          first: 'step01',
         },
         stepDefs: [
           {
