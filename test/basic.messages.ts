@@ -4,7 +4,6 @@ export default {
   print: false,
   pattern: 'sys:flow',
   allow: { missing: true },
-  // log: true,
 
   calls: [
     {
@@ -183,7 +182,6 @@ export default {
     },
 
     {
-      print: true,
       name: 'start0',
       pattern: 'start:flow',
       params: {
@@ -202,7 +200,6 @@ export default {
     },
 
     {
-      print: true,
       name: 'apply0',
       pattern: 'apply:step',
       params: {
@@ -215,13 +212,36 @@ export default {
       },
       out: {
         ok: true,
-        flow: {},
-        steps: [],
+        flow: {
+          name: 'flow01',
+          kind: 'standard',
+          code: '',
+          status: '',
+          content: {},
+          first: 'step01',
+          xfoo: 'WW',
+          flowDef: 'flow01',
+          flowDef_id: 'flow01',
+          id: '`start0:out.flow.id`',
+          step: 'step02',
+        },
+        step: {
+          name: 'step02',
+          content: { a: 22 },
+          xbar: 'QQ',
+          kind: 'standard',
+          code: '',
+          status: '',
+          flowDef: 'flow01',
+          next: { step01: {} },
+          flow_id: '`start0:out.flow.id`',
+          flowDef_id: 'flow01',
+          stepDef_id: 'flow01_step02',
+        }
       }
     },
 
     {
-      print: true,
       name: 'load1',
       pattern: 'load:flow',
       params: {
@@ -229,10 +249,233 @@ export default {
       },
       out: {
         ok: true,
-        flow: {},
-        steps: [],
+        flow: {
+          name: 'flow01',
+          kind: 'standard',
+          code: '',
+          status: '',
+          content: {},
+          first: 'step01',
+          xfoo: 'WW',
+          flowDef: 'flow01',
+          flowDef_id: 'flow01',
+          step: 'step02',
+        },
+        steps: [
+          {
+            name: 'step01',
+            kind: 'standard',
+            code: '',
+            status: '',
+            content: {},
+            flowDef: 'flow01',
+            next: { step02: {}, step03: {} },
+            flow_id: '`start0:out.flow.id`',
+            flowDef_id: 'flow01',
+            stepDef_id: 'flow01_step01',
+          },
+          {
+            name: 'step02',
+            content: { a: 22 },
+            xbar: 'QQ',
+            kind: 'standard',
+            code: '',
+            status: '',
+            flowDef: 'flow01',
+            next: { step01: {} },
+            flow_id: '`start0:out.flow.id`',
+            flowDef_id: 'flow01',
+            stepDef_id: 'flow01_step02',
+          }
+        ]
       }
     },
+
+    {
+      name: 'log0',
+      pattern: 'load:log',
+      params: {
+        flow_id: '`start0:out.flow.id`',
+      },
+      out: {
+        ok: true,
+        flow: {
+          name: 'flow01',
+          kind: 'standard',
+          code: '',
+          status: '',
+          content: {},
+          first: 'step01',
+          xfoo: 'WW',
+          flowDef: 'flow01',
+          flowDef_id: 'flow01',
+          step: 'step02',
+        },
+        steps: [
+          {
+            name: 'step01',
+          },
+          {
+            name: 'step02',
+          }
+        ],
+        log: [
+          {
+            flow_id: '`start0:out.flow.id`',
+            step: {
+              name: 'step01',
+              kind: 'standard',
+              code: '',
+              status: '',
+              content: {}
+            },
+          },
+          {
+            flow_id: '`start0:out.flow.id`',
+            step: {
+              name: 'step02',
+              content: { a: 22 },
+              xbar: 'QQ',
+              kind: 'standard',
+              code: '',
+              status: ''
+            },
+          }
+        ]
+      }
+    },
+
+    {
+      name: 'apply1',
+      pattern: 'apply:step',
+      params: {
+        flow_id: '`start0:out.flow.id`',
+        step: {
+          name: 'step01',
+          status: 'green',
+          content: { b: 33 }, // merged
+        },
+      },
+      out: {
+        ok: true,
+        flow: {
+          name: 'flow01',
+          kind: 'standard',
+          step: 'step01',
+        },
+        step: {
+          name: 'step01',
+          status: 'green',
+          content: { b: 33 },
+        }
+      }
+    },
+
+    {
+      name: 'load1',
+      pattern: 'load:flow',
+      params: {
+        flow_id: '`start0:out.flow.id`',
+      },
+      out: {
+        ok: true,
+        flow: {
+          name: 'flow01',
+          kind: 'standard',
+          code: '',
+          status: '',
+          content: {},
+          first: 'step01',
+          xfoo: 'WW',
+          flowDef: 'flow01',
+          flowDef_id: 'flow01',
+          step: 'step01',
+        },
+        steps: [
+          {
+            name: 'step01',
+            kind: 'standard',
+            code: '',
+            status: 'green',
+            content: { b: 33 },
+            flowDef: 'flow01',
+            next: { step02: {}, step03: {} },
+            flow_id: '`start0:out.flow.id`',
+            flowDef_id: 'flow01',
+            stepDef_id: 'flow01_step01',
+          },
+          {
+            name: 'step02',
+            content: { a: 22 },
+            xbar: 'QQ',
+            kind: 'standard',
+            code: '',
+            status: '',
+            flowDef: 'flow01',
+            next: { step01: {} },
+            flow_id: '`start0:out.flow.id`',
+            flowDef_id: 'flow01',
+            stepDef_id: 'flow01_step02',
+          }
+        ]
+      }
+    },
+
+    {
+      name: 'log0',
+      pattern: 'load:log',
+      params: {
+        flow_id: '`start0:out.flow.id`',
+      },
+      out: {
+        ok: true,
+        flow: {
+          name: 'flow01',
+          step: 'step01',
+        },
+        steps: [
+          {
+            name: 'step01',
+          },
+          {
+            name: 'step02',
+          }
+        ],
+        log: [
+          {
+            flow_id: '`start0:out.flow.id`',
+            step: {
+              name: 'step01',
+              kind: 'standard',
+              code: '',
+              status: '',
+              content: {}
+            },
+          },
+          {
+            flow_id: '`start0:out.flow.id`',
+            step: {
+              name: 'step02',
+              content: { a: 22 },
+              xbar: 'QQ',
+              kind: 'standard',
+              code: '',
+              status: ''
+            },
+          },
+          {
+            flow_id: '`start0:out.flow.id`',
+            step: {
+              name: 'step01',
+              status: 'green',
+              content: { b: 33 },
+              kind: 'standard',
+              code: ''
+            },
+          }
+        ]
+      }
+    }
 
   ]
 }

@@ -89,6 +89,11 @@ function flow(this: any, options: any) {
       flow_id: String,
     }, msg_load_flow)
 
+    .message({
+      load: 'log',
+      flow_id: String,
+    }, msg_load_log)
+
     .prepare(prepare)
 
 
@@ -364,6 +369,12 @@ function flow(this: any, options: any) {
       when: Date.now(),
     })
 
+    await seneca.entity('sys/flowStepLog').save$({
+      when: nextStepEnt.when,
+      flow_id: flowEnt.id,
+      step,
+    })
+
     await nextStepEnt.save$()
 
     flowEnt.step = nextStepEnt.name
@@ -374,6 +385,28 @@ function flow(this: any, options: any) {
       ok: true,
       flow: flowEnt.data$(false),
       step: nextStepEnt.data$(false),
+    }
+  }
+
+
+  async function msg_load_log(this: any, msg: any) {
+    let flow_id = msg.flow_id
+
+    let flowEnt = await this.entity('sys/flow').load$(flow_id)
+
+    if (null == flowEnt) {
+      return { ok: false, why: 'unknown-flow', details: { flow_id } }
+    }
+
+    let stepEnts = await this.entity('sys/flowStep').list$({ flow_id })
+
+    let stepLogEnts = await this.entity('sys/flowStepLog').list$({ flow_id })
+
+    return {
+      ok: true,
+      flow: flowEnt.data$(false),
+      steps: stepEnts.map((se: any) => se.data$(false)),
+      log: stepLogEnts.map((se: any) => se.data$(false))
     }
   }
 
