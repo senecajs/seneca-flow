@@ -38,18 +38,18 @@ const FlowQueryShape = Open({
 const FlowShape = Open({
   name: String,
   assign_id: String,
-  kind: 'standard',
-  code: '',
-  status: '',
+  kind: Skip(''),
+  code: Skip(''),
+  status: Skip(''),
   active: true,
   content: {},
 })
 
 const StepShape = Open({
   name: String,
-  kind: 'standard',
-  code: '',
-  status: '',
+  kind: Skip(''),
+  code: Skip(''),
+  status: Skip(''),
   content: {},
 })
 
@@ -85,7 +85,7 @@ function flow(this: any, options: any) {
     .message({
       start: 'flow',
       flow: FlowShape,
-      step: StepShape,
+      step: Skip(StepShape),
     }, msg_start_flow)
 
     .message({
@@ -268,7 +268,13 @@ function flow(this: any, options: any) {
 
     let flowEnt = await this.entity('sys/flow').save$(flowData)
 
-    let stepres = await apply_step(this, flowDef, stepDefs, flowEnt, msg.step)
+
+    let step = msg.step || {}
+    if (null == step.name) {
+      step.name = flowDef.first
+    }
+
+    let stepres = await apply_step(this, flowDef, stepDefs, flowEnt, step)
 
     // console.log('STEPRES', stepres)
 
@@ -330,8 +336,6 @@ function flow(this: any, options: any) {
       ...msg.flow
     })
 
-    console.log('QQQ', q)
-
     let list = (await this.entity('sys/flow').list$(q))
       .map((flow: any) => flow.data$(false))
 
@@ -368,8 +372,6 @@ function flow(this: any, options: any) {
     if (null == nextStepDef) {
       return { ok: false, why: 'unknown-step', details: { step } }
     }
-
-    // console.log('QQQ', flowEnt, stepDefs)
 
     let currentStepName = flowEnt.step
     let currentStepDef = stepDefs.find((sd: any) => sd.name === currentStepName)

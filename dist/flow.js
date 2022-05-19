@@ -30,17 +30,17 @@ const FlowQueryShape = (0, gubu_1.Open)({
 const FlowShape = (0, gubu_1.Open)({
     name: String,
     assign_id: String,
-    kind: 'standard',
-    code: '',
-    status: '',
+    kind: (0, gubu_1.Skip)(''),
+    code: (0, gubu_1.Skip)(''),
+    status: (0, gubu_1.Skip)(''),
     active: true,
     content: {},
 });
 const StepShape = (0, gubu_1.Open)({
     name: String,
-    kind: 'standard',
-    code: '',
-    status: '',
+    kind: (0, gubu_1.Skip)(''),
+    code: (0, gubu_1.Skip)(''),
+    status: (0, gubu_1.Skip)(''),
     content: {},
 });
 /* - Hides implementation with seneca entities and provides data model
@@ -68,7 +68,7 @@ function flow(options) {
         .message({
         start: 'flow',
         flow: FlowShape,
-        step: StepShape,
+        step: (0, gubu_1.Skip)(StepShape),
     }, msg_start_flow)
         .message({
         apply: 'step',
@@ -209,7 +209,11 @@ function flow(options) {
         };
         delete flowData.id;
         let flowEnt = await this.entity('sys/flow').save$(flowData);
-        let stepres = await apply_step(this, flowDef, stepDefs, flowEnt, msg.step);
+        let step = msg.step || {};
+        if (null == step.name) {
+            step.name = flowDef.first;
+        }
+        let stepres = await apply_step(this, flowDef, stepDefs, flowEnt, step);
         // console.log('STEPRES', stepres)
         if (!stepres.ok) {
             return stepres;
@@ -249,7 +253,6 @@ function flow(options) {
         const q = clean({
             ...msg.flow
         });
-        console.log('QQQ', q);
         let list = (await this.entity('sys/flow').list$(q))
             .map((flow) => flow.data$(false));
         // TODO: could be a seneca entity util?
@@ -277,7 +280,6 @@ function flow(options) {
         if (null == nextStepDef) {
             return { ok: false, why: 'unknown-step', details: { step } };
         }
-        // console.log('QQQ', flowEnt, stepDefs)
         let currentStepName = flowEnt.step;
         let currentStepDef = stepDefs.find((sd) => sd.name === currentStepName);
         let allowedNextStepNames = [...(null == currentStepDef ?
