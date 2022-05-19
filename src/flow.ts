@@ -1,7 +1,7 @@
 /* Copyright © 2022 Richard Rodger and Seneca Project Contributors, MIT License. */
 
 
-import { One, Value, Open } from 'gubu'
+import { One, Value, Open, Skip } from 'gubu'
 
 
 // TODO: generate types from a model
@@ -27,11 +27,21 @@ const StepDefShape = Open({
 })
 
 
+const FlowQueryShape = Open({
+  assign_id: String,
+  kind: Skip(''),
+  code: Skip(''),
+  status: Skip(''),
+  active: true,
+})
+
 const FlowShape = Open({
   name: String,
+  assign_id: String,
   kind: 'standard',
   code: '',
   status: '',
+  active: true,
   content: {},
 })
 
@@ -88,6 +98,11 @@ function flow(this: any, options: any) {
       load: 'flow',
       flow_id: String,
     }, msg_load_flow)
+
+    .message({
+      list: 'flow',
+      flow: FlowQueryShape,
+    }, msg_list_flow)
 
     .message({
       load: 'log',
@@ -304,6 +319,42 @@ function flow(this: any, options: any) {
       ok: true,
       flow: flowEnt.data$(false),
       steps: stepEnts.map((se: any) => se.data$(false))
+    }
+  }
+
+
+  async function msg_list_flow(this: any, msg: any) {
+    const seneca = this
+
+    const q = clean({
+      ...msg.flow
+    })
+
+    console.log('QQQ', q)
+
+    let list = (await this.entity('sys/flow').list$(q))
+      .map((flow: any) => flow.data$(false))
+
+    // TODO: could be a seneca entity util?
+    let flowMap = list.reduce((a: any, flow: any) => (a[flow.id] = flow, a), {})
+    let flowIds = Object.keys(flowMap)
+
+    let steps = await this.entity('sys/flowStep').list$({ flow_id: flowIds })
+
+    for (let step of steps) {
+      let flow = flowMap[step.flow_id]
+      if (flow) {
+        flow.steps = flow.steps || {}
+        flow.steps[step.name] = step.data$(false)
+      }
+      else {
+        seneca.log.warn('bad-flow-for-step', { step })
+      }
+    }
+
+    return {
+      ok: true,
+      list,
     }
   }
 

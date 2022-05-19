@@ -20,11 +20,20 @@ const StepDefShape = (0, gubu_1.Open)({
     content: {},
     next: (0, gubu_1.Value)({}, {})
 });
+const FlowQueryShape = (0, gubu_1.Open)({
+    assign_id: String,
+    kind: (0, gubu_1.Skip)(''),
+    code: (0, gubu_1.Skip)(''),
+    status: (0, gubu_1.Skip)(''),
+    active: true,
+});
 const FlowShape = (0, gubu_1.Open)({
     name: String,
+    assign_id: String,
     kind: 'standard',
     code: '',
     status: '',
+    active: true,
     content: {},
 });
 const StepShape = (0, gubu_1.Open)({
@@ -70,6 +79,10 @@ function flow(options) {
         load: 'flow',
         flow_id: String,
     }, msg_load_flow)
+        .message({
+        list: 'flow',
+        flow: FlowQueryShape,
+    }, msg_list_flow)
         .message({
         load: 'log',
         flow_id: String,
@@ -229,6 +242,33 @@ function flow(options) {
             ok: true,
             flow: flowEnt.data$(false),
             steps: stepEnts.map((se) => se.data$(false))
+        };
+    }
+    async function msg_list_flow(msg) {
+        const seneca = this;
+        const q = clean({
+            ...msg.flow
+        });
+        console.log('QQQ', q);
+        let list = (await this.entity('sys/flow').list$(q))
+            .map((flow) => flow.data$(false));
+        // TODO: could be a seneca entity util?
+        let flowMap = list.reduce((a, flow) => (a[flow.id] = flow, a), {});
+        let flowIds = Object.keys(flowMap);
+        let steps = await this.entity('sys/flowStep').list$({ flow_id: flowIds });
+        for (let step of steps) {
+            let flow = flowMap[step.flow_id];
+            if (flow) {
+                flow.steps = flow.steps || {};
+                flow.steps[step.name] = step.data$(false);
+            }
+            else {
+                seneca.log.warn('bad-flow-for-step', { step });
+            }
+        }
+        return {
+            ok: true,
+            list,
         };
     }
     async function apply_step(seneca, flowDef, stepDefs, flowEnt, step) {

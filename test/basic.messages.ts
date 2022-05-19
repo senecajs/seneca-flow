@@ -187,6 +187,7 @@ export default {
       params: {
         flow: {
           name: 'flow01',
+          assign_id: 'u01',
         },
         step: {
           name: 'step01',
@@ -206,6 +207,8 @@ export default {
         flow_id: '`start0:out.flow.id`',
         step: {
           name: 'step02',
+          assign_id: 'u01', // user assigned to this flow
+          active: true, // flow is active
           content: { a: 22 }, // merged
           xbar: 'QQ', // custom field
         },
@@ -251,6 +254,8 @@ export default {
         ok: true,
         flow: {
           name: 'flow01',
+          active: true,
+          assign_id: 'u01',
           kind: 'standard',
           code: '',
           status: '',
@@ -302,6 +307,7 @@ export default {
         flow: {
           name: 'flow01',
           kind: 'standard',
+          assign_id: 'u01',
           code: '',
           status: '',
           content: {},
@@ -360,6 +366,7 @@ export default {
         ok: true,
         flow: {
           name: 'flow01',
+          assign_id: 'u01',
           kind: 'standard',
           step: 'step01',
         },
@@ -381,6 +388,7 @@ export default {
         ok: true,
         flow: {
           name: 'flow01',
+          assign_id: 'u01',
           kind: 'standard',
           code: '',
           status: '',
@@ -475,7 +483,22 @@ export default {
           }
         ]
       }
-    }
+    },
+
+    {
+      print: true,
+      name: 'list1',
+      pattern: 'list:flow',
+      params: {
+        flow: {
+          assign_id: 'u01',
+        }
+      },
+      out: {
+        ok: true,
+        list: []
+      }
+    },
 
   ]
 }
