@@ -53,12 +53,20 @@ const StepShape = Open({
   content: {},
 })
 
+// TODO: Gubu.extend would be nice
+const StartStepShape = Open({
+  name: Skip(String), // no step name defaults to first step
+  kind: Skip(''),
+  code: Skip(''),
+  status: Skip(''),
+  content: {},
+})
+
 
 /* - Hides implementation with seneca entities and provides data model
  *   as pure objects.  
  * - Foreign keys are suffixed with _id.
  */
-
 function flow(this: any, options: any) {
   const seneca: any = this
 
@@ -85,7 +93,7 @@ function flow(this: any, options: any) {
     .message({
       start: 'flow',
       flow: FlowShape,
-      step: Skip(StepShape),
+      step: Skip(StartStepShape),
     }, msg_start_flow)
 
     .message({
@@ -276,17 +284,20 @@ function flow(this: any, options: any) {
 
     let stepres = await apply_step(this, flowDef, stepDefs, flowEnt, step)
 
+    return stepres
+
+
     // console.log('STEPRES', stepres)
 
-    if (!stepres.ok) {
-      return stepres
-    }
+    // if (!stepres.ok) {
+    //   return stepres
+    // }
 
-    let startres = await this.post('sys:flow,load:flow', { flow_id: flowEnt.id })
+    // let startres = await this.post('sys:flow,load:flow', { flow_id: flowEnt.id })
 
     // console.log('STARTRES', startres)
 
-    return startres
+    // return startres
   }
 
 
@@ -434,11 +445,17 @@ function flow(this: any, options: any) {
     flowEnt.when = Date.now()
     await flowEnt.save$()
 
-    return {
-      ok: true,
-      flow: flowEnt.data$(false),
-      step: nextStepEnt.data$(false),
-    }
+    let out = await seneca.post('sys:flow,load:flow', { flow_id: flowEnt.id })
+
+    out.step = nextStepEnt.data$(false)
+
+    return out
+
+    // return {
+    //   ok: true,
+    //   flow: flowEnt.data$(false),
+    //   step: nextStepEnt.data$(false),
+    // }
   }
 
 

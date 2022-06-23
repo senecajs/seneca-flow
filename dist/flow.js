@@ -43,6 +43,14 @@ const StepShape = (0, gubu_1.Open)({
     status: (0, gubu_1.Skip)(''),
     content: {},
 });
+// TODO: Gubu.extend would be nice
+const StartStepShape = (0, gubu_1.Open)({
+    name: (0, gubu_1.Skip)(String),
+    kind: (0, gubu_1.Skip)(''),
+    code: (0, gubu_1.Skip)(''),
+    status: (0, gubu_1.Skip)(''),
+    content: {},
+});
 /* - Hides implementation with seneca entities and provides data model
  *   as pure objects.
  * - Foreign keys are suffixed with _id.
@@ -68,7 +76,7 @@ function flow(options) {
         .message({
         start: 'flow',
         flow: FlowShape,
-        step: (0, gubu_1.Skip)(StepShape),
+        step: (0, gubu_1.Skip)(StartStepShape),
     }, msg_start_flow)
         .message({
         apply: 'step',
@@ -214,13 +222,14 @@ function flow(options) {
             step.name = flowDef.first;
         }
         let stepres = await apply_step(this, flowDef, stepDefs, flowEnt, step);
+        return stepres;
         // console.log('STEPRES', stepres)
-        if (!stepres.ok) {
-            return stepres;
-        }
-        let startres = await this.post('sys:flow,load:flow', { flow_id: flowEnt.id });
+        // if (!stepres.ok) {
+        //   return stepres
+        // }
+        // let startres = await this.post('sys:flow,load:flow', { flow_id: flowEnt.id })
         // console.log('STARTRES', startres)
-        return startres;
+        // return startres
     }
     async function msg_apply_step(msg) {
         let flowEnt = await this.entity('sys/flow').load$(msg.flow_id);
@@ -331,11 +340,14 @@ function flow(options) {
         flowEnt.step = nextStepEnt.name;
         flowEnt.when = Date.now();
         await flowEnt.save$();
-        return {
-            ok: true,
-            flow: flowEnt.data$(false),
-            step: nextStepEnt.data$(false),
-        };
+        let out = await seneca.post('sys:flow,load:flow', { flow_id: flowEnt.id });
+        out.step = nextStepEnt.data$(false);
+        return out;
+        // return {
+        //   ok: true,
+        //   flow: flowEnt.data$(false),
+        //   step: nextStepEnt.data$(false),
+        // }
     }
     async function msg_load_log(msg) {
         let flow_id = msg.flow_id;
