@@ -1,6 +1,6 @@
 {
   "name": "@seneca/flow",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "main": "dist/flow.js",
   "type": "commonjs",
   "types": "dist/flow.d.ts",
