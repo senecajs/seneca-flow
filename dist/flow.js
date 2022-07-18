@@ -94,7 +94,8 @@ function flow(options) {
         .message({
         load: 'log',
         flow_id: String,
-    }, msg_load_log)
+    }, msg_load_log);
+    seneca
         .prepare(prepare);
     async function prepare() {
         if (options.flows) {

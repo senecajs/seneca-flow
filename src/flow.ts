@@ -117,6 +117,7 @@ function flow(this: any, options: any) {
       flow_id: String,
     }, msg_load_log)
 
+  seneca
     .prepare(prepare)
 
 

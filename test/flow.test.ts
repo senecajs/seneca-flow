@@ -14,11 +14,44 @@ describe('flow', () => {
     await seneca.close()
   })
 
+
+  test('options', async () => {
+    const seneca = await makeSeneca({
+      flows: [
+        {
+          flowDef: {
+            name: 'f01',
+            code: 'f',
+            first: 'start',
+          },
+          stepDefs: [
+            {
+              name: 'start',
+              next: {}
+            },
+          ],
+        },
+      ]
+    })
+
+    await seneca.ready()
+
+    let flowDefList = await seneca.entity('sys/flowDef').list$()
+    expect(flowDefList[0].name).toEqual('f01')
+
+    let flowStepDefList = await seneca.entity('sys/flowStepDef').list$()
+    expect(flowStepDefList[0].name).toEqual('start')
+
+    await seneca.close()
+  })
+
+
   test('messages', async () => {
     const seneca = await makeSeneca(makeOpts())
     await (SenecaMsgTest(seneca, BasicMessages)())
     await seneca.close()
   })
+
 
 })
 
