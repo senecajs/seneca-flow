@@ -222,7 +222,7 @@ function flow(options) {
         if (null == step.name) {
             step.name = flowDef.first;
         }
-        let stepres = await apply_step(this, flowDef, stepDefs, flowEnt, step);
+        let stepres = await apply_step(this, flowDef, stepDefs, flowEnt, null, step);
         return stepres;
         // console.log('STEPRES', stepres)
         // if (!stepres.ok) {
@@ -233,6 +233,7 @@ function flow(options) {
         // return startres
     }
     async function msg_apply_step(msg) {
+        let flowData = msg.flow || null;
         let flowEnt = await this.entity('sys/flow').load$(msg.flow_id);
         if (null == flowEnt) {
             return { ok: false, why: 'unknown-flow', details: { flow: msg.flow } };
@@ -242,7 +243,7 @@ function flow(options) {
             return flowres;
         }
         let { flowDef, stepDefs } = flowres;
-        let out = apply_step(this, flowDef, stepDefs, flowEnt, msg.step);
+        let out = apply_step(this, flowDef, stepDefs, flowEnt, flowData, msg.step);
         return out;
     }
     async function msg_load_flow(msg) {
@@ -284,7 +285,7 @@ function flow(options) {
             list,
         };
     }
-    async function apply_step(seneca, flowDef, stepDefs, flowEnt, step) {
+    async function apply_step(seneca, flowDef, stepDefs, flowEnt, flowData, step) {
         let nextStepName = step.name;
         let nextStepDef = stepDefs.find((sd) => sd.name === nextStepName);
         if (null == nextStepDef) {
@@ -338,17 +339,15 @@ function flow(options) {
             step,
         });
         await nextStepEnt.save$();
+        if (flowData) {
+            flowEnt.data$(flowData);
+        }
         flowEnt.step = nextStepEnt.name;
         flowEnt.when = Date.now();
         await flowEnt.save$();
         let out = await seneca.post('sys:flow,load:flow', { flow_id: flowEnt.id });
         out.step = nextStepEnt.data$(false);
         return out;
-        // return {
-        //   ok: true,
-        //   flow: flowEnt.data$(false),
-        //   step: nextStepEnt.data$(false),
-        // }
     }
     async function msg_load_log(msg) {
         let flow_id = msg.flow_id;

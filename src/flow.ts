@@ -283,7 +283,7 @@ function flow(this: any, options: any) {
       step.name = flowDef.first
     }
 
-    let stepres = await apply_step(this, flowDef, stepDefs, flowEnt, step)
+    let stepres = await apply_step(this, flowDef, stepDefs, flowEnt, null, step)
 
     return stepres
 
@@ -303,6 +303,8 @@ function flow(this: any, options: any) {
 
 
   async function msg_apply_step(this: any, msg: any) {
+    let flowData = msg.flow || null
+
     let flowEnt = await this.entity('sys/flow').load$(msg.flow_id)
 
     if (null == flowEnt) {
@@ -316,7 +318,7 @@ function flow(this: any, options: any) {
 
     let { flowDef, stepDefs } = flowres
 
-    let out = apply_step(this, flowDef, stepDefs, flowEnt, msg.step)
+    let out = apply_step(this, flowDef, stepDefs, flowEnt, flowData, msg.step)
 
     return out
   }
@@ -376,7 +378,12 @@ function flow(this: any, options: any) {
 
 
   async function apply_step(
-    seneca: any, flowDef: any, stepDefs: any, flowEnt: any, step: any
+    seneca: any,
+    flowDef: any,
+    stepDefs: any,
+    flowEnt: any,
+    flowData: any,
+    step: any
   ) {
     let nextStepName = step.name
     let nextStepDef = stepDefs.find((sd: any) => sd.name === nextStepName)
@@ -442,6 +449,10 @@ function flow(this: any, options: any) {
 
     await nextStepEnt.save$()
 
+    if (flowData) {
+      flowEnt.data$(flowData)
+    }
+
     flowEnt.step = nextStepEnt.name
     flowEnt.when = Date.now()
     await flowEnt.save$()
@@ -451,12 +462,6 @@ function flow(this: any, options: any) {
     out.step = nextStepEnt.data$(false)
 
     return out
-
-    // return {
-    //   ok: true,
-    //   flow: flowEnt.data$(false),
-    //   step: nextStepEnt.data$(false),
-    // }
   }
 
 
