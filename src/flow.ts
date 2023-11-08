@@ -1,7 +1,7 @@
-/* Copyright © 2022 Richard Rodger and Seneca Project Contributors, MIT License. */
+/* Copyright © 2022-2023 Richard Rodger and Seneca Project Contributors, MIT License. */
 
 
-import { One, Value, Open, Skip } from 'gubu'
+import { One, Child, Open, Skip } from 'gubu'
 
 
 // TODO: generate types from a model
@@ -23,7 +23,7 @@ const StepDefShape = Open({
   code: '',
   status: '',
   content: {},
-  next: Value({}, {})
+  next: Child({}, {})
 })
 
 
@@ -116,6 +116,9 @@ function flow(this: any, options: any) {
       load: 'log',
       flow_id: String,
     }, msg_load_log)
+
+  // TODO: load|list|update:flowStep
+  // find:flow,query:{...}
 
   seneca
     .prepare(prepare)

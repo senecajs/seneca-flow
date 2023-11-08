@@ -3,12 +3,22 @@ declare namespace flow {
     var defaults: {
         debug: boolean;
         flows: {
-            flowDef: import("gubu").Node & {
-                [name: string]: any;
-            };
-            stepDefs: (import("gubu").Node & {
-                [name: string]: any;
-            })[];
+            flowDef: import("gubu").Node<{
+                name: StringConstructor;
+                kind: string;
+                code: string;
+                status: string;
+                first: StringConstructor;
+                content: {};
+            }>;
+            stepDefs: import("gubu").Node<{
+                name: StringConstructor;
+                kind: string;
+                code: string;
+                status: string;
+                content: {};
+                next: import("gubu").Node<{}>;
+            }>[];
         }[];
     };
 }

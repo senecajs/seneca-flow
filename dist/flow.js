@@ -1,5 +1,5 @@
 "use strict";
-/* Copyright © 2022 Richard Rodger and Seneca Project Contributors, MIT License. */
+/* Copyright © 2022-2023 Richard Rodger and Seneca Project Contributors, MIT License. */
 Object.defineProperty(exports, "__esModule", { value: true });
 const gubu_1 = require("gubu");
 // TODO: generate types from a model
@@ -18,7 +18,7 @@ const StepDefShape = (0, gubu_1.Open)({
     code: '',
     status: '',
     content: {},
-    next: (0, gubu_1.Value)({}, {})
+    next: (0, gubu_1.Child)({}, {})
 });
 const FlowQueryShape = (0, gubu_1.Open)({
     assign_id: String,
@@ -95,6 +95,8 @@ function flow(options) {
         load: 'log',
         flow_id: String,
     }, msg_load_log);
+    // TODO: load|list|update:flowStep
+    // find:flow,query:{...}
     seneca
         .prepare(prepare);
     async function prepare() {
