@@ -14,16 +14,32 @@
 
 ## Install
 
+Requires Seneca 4, `@seneca/entity` 29 and Node.js 24 or later.
+
 ```sh
-npm install @seneca/flow
+npm install seneca@^4 @seneca/entity @seneca/flow
 ```
 
 ## Quick Example
 
 ```js
 require('seneca')()
-  .use('@seneca/flow')
+  .use('@seneca/entity')
+  .use('@seneca/flow', {
+    flows: [
+      {
+        flowDef: { name: 'order', first: 'placed' },
+        stepDefs: [
+          { name: 'placed', next: { shipped: {} } },
+          { name: 'shipped' },
+        ],
+      },
+    ],
+  })
 ```
+
+The option `flows` defines flows when the plugin starts. Without it, no
+flow is defined.
 
 ## More Examples
 

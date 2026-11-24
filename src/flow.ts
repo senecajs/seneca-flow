@@ -1,66 +1,78 @@
 /* Copyright © 2022-2023 Richard Rodger and Seneca Project Contributors, MIT License. */
 
 
-import { One, Child, Open, Skip } from 'gubu'
-
-
 // TODO: generate types from a model
 
 
-// TODO: Gubu: not really open, just allow keys =~ /^x.+/
-const FlowDefShape = Open({
-  name: String,
-  kind: 'standard',
-  code: '',
-  status: '',
-  first: String, // name of first step
-  content: {},
-})
+// The shapes are built from the validator that Seneca provides
+// (seneca.valid, or the valid argument of the defaults function).
+function makeShapes(valid: any) {
+  const { Child, Open, Skip } = valid
 
-const StepDefShape = Open({
-  name: String,
-  kind: 'standard',
-  code: '',
-  status: '',
-  content: {},
-  next: Child({}, {})
-})
+  // TODO: not really open, just allow keys =~ /^x.+/
+  const FlowDefShape = Open({
+    name: String,
+    kind: 'standard',
+    code: '',
+    status: '',
+    first: String, // name of first step
+    content: {},
+  })
+
+  const StepDefShape = Open({
+    name: String,
+    kind: 'standard',
+    code: '',
+    status: '',
+    content: {},
+    next: Child({}, {})
+  })
 
 
-const FlowQueryShape = Open({
-  assign_id: String,
-  kind: Skip(''),
-  code: Skip(''),
-  status: Skip(''),
-  active: true,
-})
+  const FlowQueryShape = Open({
+    assign_id: String,
+    kind: Skip(''),
+    code: Skip(''),
+    status: Skip(''),
+    active: true,
+  })
 
-const FlowShape = Open({
-  name: String,
-  assign_id: String,
-  kind: Skip(''),
-  code: Skip(''),
-  status: Skip(''),
-  active: true,
-  content: {},
-})
+  const FlowShape = Open({
+    name: String,
+    assign_id: String,
+    kind: Skip(''),
+    code: Skip(''),
+    status: Skip(''),
+    active: true,
+    content: {},
+  })
 
-const StepShape = Open({
-  name: String,
-  kind: Skip(''),
-  code: Skip(''),
-  status: Skip(''),
-  content: {},
-})
+  const StepShape = Open({
+    name: String,
+    kind: Skip(''),
+    code: Skip(''),
+    status: Skip(''),
+    content: {},
+  })
 
-// TODO: Gubu.extend would be nice
-const StartStepShape = Open({
-  name: Skip(String), // no step name defaults to first step
-  kind: Skip(''),
-  code: Skip(''),
-  status: Skip(''),
-  content: {},
-})
+  // TODO: Extend would be nice
+  const StartStepShape = Open({
+    name: Skip(String), // no step name defaults to first step
+    kind: Skip(''),
+    code: Skip(''),
+    status: Skip(''),
+    content: {},
+  })
+
+  return {
+    FlowDefShape,
+    StepDefShape,
+    FlowQueryShape,
+    FlowShape,
+    StepShape,
+    StartStepShape,
+  }
+}
 
 
 /* - Hides implementation with seneca entities and provides data model
@@ -70,12 +82,22 @@ const StartStepShape = Open({
 function flow(this: any, options: any) {
   const seneca: any = this
 
+  const { One, Skip } = seneca.valid
+  const {
+    FlowDefShape,
+    StepDefShape,
+    FlowQueryShape,
+    FlowShape,
+    StepShape,
+    StartStepShape,
+  } = makeShapes(seneca.valid)
+
   seneca
     .fix('sys:flow')
 
     .message({
       define: 'flowdef',
-      // TODO: Gubu: this is a use case for Gubu/Optional: Optional(false)
+      // TODO: this is a use case for Optional: Optional(false)
       merge: One(true, false, undefined),
       flowDef: FlowDefShape,
       stepDefs: [StepDefShape],
@@ -493,12 +515,15 @@ function flow(this: any, options: any) {
 
 
 // Default options.
-flow.defaults = {
-  debug: false,
-  flows: [{
-    flowDef: FlowDefShape,
-    stepDefs: [StepDefShape],
-  }],
+flow.defaults = ({ valid }: { valid: any }) => {
+  const { FlowDefShape, StepDefShape } = makeShapes(valid)
+  return {
+    debug: false,
+    flows: [{
+      flowDef: FlowDefShape,
+      stepDefs: [StepDefShape],
+    }],
+  }
 }
 
 

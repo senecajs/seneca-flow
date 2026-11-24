@@ -15,6 +15,52 @@ describe('flow', () => {
   })
 
 
+  // The default options define no flows.
+  test('defaults', async () => {
+    const seneca = await makeSeneca()
+    expect(seneca.find_plugin('flow').options.flows).toEqual([])
+
+    let flowDefList = await seneca.entity('sys/flowDef').list$()
+    expect(flowDefList).toEqual([])
+
+    let res = await seneca.post('sys:flow,list:flowdef')
+    expect(res).toEqual({ ok: true, list: [] })
+
+    await seneca.close()
+  })
+
+
+  test('invalid-options', async () => {
+    const errs: any[] = []
+    const seneca = Seneca({ legacy: false, debug: { undead: true } })
+      .test((err: any) => errs.push(err), 'silent')
+      .use('@seneca/entity')
+      .use(Flow, {
+        flows: [{ flowDef: { code: 'no-name' }, stepDefs: [] }]
+      })
+    await seneca.ready()
+    expect(errs.map((err: any) => err.code)).toEqual(['invalid_plugin_option'])
+    await seneca.close()
+  })
+
+
+  test('invalid-message', async () => {
+    const seneca = await makeSeneca(undefined, 'silent')
+
+    // flow.assign_id is required
+    await expect(seneca.post('sys:flow,list:flow', { flow: {} }))
+      .rejects.toMatchObject({ code: 'act_invalid_msg' })
+
+    // step names are strings
+    await expect(seneca.post('sys:flow,define:flowdef', {
+      flowDef: { name: 'f', first: 's' },
+      stepDefs: [{ name: 1 }],
+    })).rejects.toMatchObject({ code: 'act_invalid_msg' })
+
+    await seneca.close()
+  })
+
+
   test('options', async () => {
     const seneca = await makeSeneca({
       flows: [
@@ -94,13 +140,13 @@ function makeOpts() {
   }
 }
 
-async function makeSeneca(popts?: any) {
+async function makeSeneca(popts?: any, log?: string) {
   const seneca = Seneca({ legacy: false })
-    .test()
-    .use('promisify')
-    .use('entity')
+    .test(log)
+    .use('@seneca/entity')
     .use(Flow, popts)
-  return await seneca.ready()
+  await seneca.ready()
+  return seneca
 }
 
 
